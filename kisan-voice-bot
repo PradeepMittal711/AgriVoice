@@ -1,0 +1,59 @@
+import os
+import asyncio
+import edge_tts
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv("kisan-voice-bot/key.env")
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+client = Groq()
+
+with open("kisan-voice-bot/prompt.txt", "r", encoding = "utf-8") as file:
+    SYSTEM_PROMPT = file.read()
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    voice_file = await update.message.voice.get_file()
+    await voice_file.download_to_drive("farmer_input.ogg")
+    
+    await update.message.reply_text("Thinking... 🤔")
+
+    with open("farmer_input.ogg", "rb") as file:
+        transcription = client.audio.transcriptions.create(
+            file=( "farmer_input.ogg", file.read() ),
+            model="whisper-large-v3",
+        )
+    user_text = transcription.text
+    print(f"Farmer said: {user_text}")
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_text},
+        ],
+        model="openai/gpt-oss-20b",
+    )
+    bot_reply = chat_completion.choices[0].message.content
+    print(f"Bot replies: {bot_reply}")
+
+    if "farmers" in bot_reply.lower() or "farmer" in bot_reply.lower() or "subsidy" in bot_reply.lower():
+        voice = "en-IN-NeerjaNeural"
+    else:
+        voice = "hi-IN-SwaraNeural"
+        
+    communicate = edge_tts.Communicate(bot_reply, voice)
+    await communicate.save("bot_reply.mp3")
+
+    await update.message.reply_voice(voice=open("bot_reply.mp3", "rb"))
+    await update.message.reply_text(f"Text version: {bot_reply}")
+
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    
+    print("Kisan Viksit Bot is running! Send a voice note on Telegram...")
+    app.run_polling()

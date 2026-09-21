@@ -1,0 +1,23 @@
+# Environment variables & API keys
+*.env
+key.env
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Temporary audio files created by your bot
+farmer_input.ogg
+bot_reply.mp3
+*.ogg
+*.mp3
+
+# Operating system junk
+.DS_Store
+Thumbs.db
+
+*.txt
+prompt.txt
