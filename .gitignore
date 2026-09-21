@@ -18,6 +18,3 @@ bot_reply.mp3
 # Operating system junk
 .DS_Store
 Thumbs.db
-
-*.txt
-prompt.txt
